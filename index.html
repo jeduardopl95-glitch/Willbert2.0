@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cierre de Caja Diario</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .step { display: none; opacity: 0; transition: opacity 0.3s ease-in-out; }
+        .step.active { display: block; opacity: 1; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .pdf-container { background-color: white; color: black; }
+        .print-break { page-break-before: always; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+
+    <header class="bg-brand-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-cash-register text-2xl text-blue-400"></i>
+                <h1 class="text-xl font-bold tracking-wide">CierreDeCaja <span class="font-light text-blue-300">Pro</span></h1>
+            </div>
+            <div id="date-display" class="text-sm font-medium text-gray-300 hidden sm:block"></div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl mx-auto w-full px-4 py-8">
+        <div class="mb-8">
+            <div class="flex justify-between relative">
+                <div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-gray-300 z-0 rounded"></div>
+                <div id="progress-bar" class="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 bg-blue-600 z-0 rounded transition-all duration-300" style="width: 0%;"></div>
+                
+                <div class="relative z-10 flex flex-col items-center">
+                    <div id="ind-1" class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-md transition-all border-4 border-white">1</div>
+                    <span class="text-xs font-semibold mt-2 text-gray-600 hidden sm:block">Turno</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div id="ind-2" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold shadow-md transition-all border-4 border-white">2</div>
+                    <span class="text-xs font-semibold mt-2 text-gray-500 hidden sm:block">Tarjetas</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div id="ind-3" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold shadow-md transition-all border-4 border-white">3</div>
+                    <span class="text-xs font-semibold mt-2 text-gray-500 hidden sm:block">Sistema</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div id="ind-4" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold shadow-md transition-all border-4 border-white">4</div>
+                    <span class="text-xs font-semibold mt-2 text-gray-500 hidden sm:block">Arqueo</span>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div id="ind-5" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold shadow-md transition-all border-4 border-white"><i class="fa-solid fa-file-invoice"></i></div>
+                    <span class="text-xs font-semibold mt-2 text-gray-500 hidden sm:block">Reporte</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            
+            <div id="step-1" class="step active p-6 sm:p-10">
+                <h2 class="text-2xl font-bold text-brand-900 border-b pb-3 mb-6"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i> Información del Turno</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Fecha del Turno</label>
+                        <input type="date" id="i_fecha" class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Sucursal</label>
+                        <select id="i_sucursal" class="w-full bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="Dos Hermanos">Dos Hermanos</option>
+                            <option value="Chetumalito">Chetumalito</option>
+                            <option value="Junior" selected>Junior</option>
+                            <option value="Playita">Playita</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Nombre del Cajero</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text" id="i_cajero" placeholder="Ej. Eduardo López" class="w-full bg-gray-50 border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="step-2" class="step p-6 sm:p-10">
+                <h2 class="text-2xl font-bold text-brand-900 border-b pb-3 mb-6"><i class="fa-regular fa-credit-card text-blue-500 mr-2"></i> Validación de Tarjetas</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center">Tickets del Sistema</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Turno Mañana</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                                    <input type="number" id="t_manana" min="0" class="calc-trigger w-full bg-white border border-gray-300 rounded-lg pl-8 pr-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Turno Tarde</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">$</span>
+                                    <input type="number" id="t_tarde" min="0" class="calc-trigger w-full bg-white border border-gray-300 rounded-lg pl-8 pr-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-gray-300 flex justify-between items-center">
+                                <span class="font-bold text-gray-700">Subtotal Tickets:</span>
+                                <span id="out_subtotal_tickets" class="font-bold text-lg text-blue-600">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-brand-900 mb-4 text-center">Terminal Física (Santander)</h3>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Total Reportado</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-blue-700 font-bold">$</span>
+                                    <input type="number" id="t_terminal" min="0" class="calc-trigger w-full bg-white border-2 border-blue-300 rounded-lg pl-8 pr-4 py-3 text-lg font-bold text-blue-900 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 bg-white p-4 rounded-lg shadow-sm border border-gray-100 text-center">
+                            <span class="block text-sm text-gray-500 font-medium mb-1">Diferencia en Tarjetas (Terminal - Tickets)</span>
+                            <span id="out_diff_tarjetas" class="text-2xl font-black text-gray-800">$0.00</span>
+                            <p id="out_diff_msg" class="text-xs mt-1 text-gray-400">Cuadre exacto</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="step-3" class="step p-6 sm:p-10">
+                <h2 class="text-2xl font-bold text-brand-900 border-b pb-3 mb-6"><i class="fa-solid fa-desktop text-blue-500 mr-2"></i> Datos de Efectivo (Sistema)</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Ventas en Efectivo</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-green-600"><i class="fa-solid fa-plus"></i>$</span>
+                                <input type="number" id="s_ventas" class="calc-trigger w-full bg-gray-50 border border-gray-300 rounded-lg pl-9 pr-4 py-2 focus:ring-2 focus:ring-blue-500" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Entradas (Dinero dejado en caja)</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-green-600"><i class="fa-solid fa-plus"></i>$</span>
+                                <input type="number" id="s_entradas" class="calc-trigger w-full bg-gray-50 border border-gray-300 rounded-lg pl-9 pr-4 py-2 focus:ring-2 focus:ring-blue-500" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Salidas (Pagos realizados)</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-red-500"><i class="fa-solid fa-minus"></i>$</span>
+                                <input type="number" id="s_salidas" class="calc-trigger w-full bg-gray-50 border border-gray-300 rounded-lg pl-9 pr-4 py-2 focus:ring-2 focus:ring-blue-500" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                            <label class="block text-sm font-bold text-orange-800 mb-2">Consumos Internos</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="s_cons_nombre" placeholder="Nombre" class="w-1/2 bg-white border border-gray-300 rounded py-1 px-2 text-sm">
+                                <div class="relative w-1/2">
+                                    <span class="absolute inset-y-0 left-0 pl-2 flex items-center text-red-500 text-xs"><i class="fa-solid fa-minus"></i>$</span>
+                                    <input type="number" id="s_cons_monto" class="calc-trigger w-full bg-white border border-gray-300 rounded py-1 pl-7 pr-2 text-sm" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">Ajustes del Turno</label>
+                            <div class="flex gap-2 mb-2">
+                                <select id="s_ajuste_signo" class="calc-trigger bg-white border border-gray-300 rounded py-1 px-2 text-sm w-1/3">
+                                    <option value="1">Suma (+)</option>
+                                    <option value="-1">Resta (-)</option>
+                                </select>
+                                <div class="relative w-2/3">
+                                    <span class="absolute inset-y-0 left-0 pl-2 flex items-center text-gray-500 text-xs">$</span>
+                                    <input type="number" id="s_ajuste_monto" class="calc-trigger w-full bg-white border border-gray-300 rounded py-1 pl-6 pr-2 text-sm" placeholder="0.00">
+                                </div>
+                            </div>
+                            <input type="text" id="s_ajuste_motivo" placeholder="Motivo del ajuste (Obligatorio si hay monto)" class="w-full bg-white border border-gray-300 rounded py-1 px-2 text-sm">
+                        </div>
+
+                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 flex items-start gap-2">
+                            <div class="mt-1">
+                                <input type="checkbox" id="s_compensar" class="calc-trigger w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 cursor-pointer">
+                            </div>
+                            <label for="s_compensar" class="text-sm text-blue-900 cursor-pointer">
+                                <strong>Compensar error de Tarjeta/Efectivo</strong><br>
+                                <span class="text-xs text-blue-700">Ajusta el efectivo esperado invirtiendo la diferencia de la terminal.</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-gray-900 text-white rounded-xl p-6 flex justify-between items-center shadow-lg">
+                    <div>
+                        <span class="block text-gray-400 text-sm font-bold uppercase tracking-wider">Efectivo Esperado (Sistema)</span>
+                        <span class="block text-xs text-gray-500 mt-1">Lo que debería haber en total (Caja + Sobre)</span>
+                    </div>
+                    <span id="out_efectivo_esperado" class="text-3xl font-black text-green-400 tracking-tight">$0.00</span>
+                </div>
+            </div>
+
+            <div id="step-4" class="step p-6 sm:p-10">
+                <h2 class="text-2xl font-bold text-brand-900 border-b pb-3 mb-6"><i class="fa-solid fa-coins text-blue-500 mr-2"></i> Conteo Físico (Arqueo)</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    
+                    <div class="lg:col-span-5 flex flex-col gap-6">
+                        <div class="bg-amber-50 border-2 border-amber-200 rounded-xl p-5 shadow-sm relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-200 transform rotate-45 opacity-50"></div>
+                            <h3 class="font-bold text-amber-900 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-cash-register"></i> 1. Dinero para Siguiente Turno
+                            </h3>
+                            <div class="space-y-4 relative z-10">
+                                <div>
+                                    <label class="block text-sm text-amber-800 font-semibold mb-1">Monto Retenido</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-amber-700 font-bold">$</span>
+                                        <input type="number" id="a_fondo_monto" class="calc-trigger w-full bg-white border border-amber-300 rounded-lg pl-8 pr-4 py-2 text-lg font-bold text-amber-900 focus:ring-2 focus:ring-amber-500" placeholder="0.00">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-amber-800 font-semibold mb-1">Motivo</label>
+                                    <select id="a_fondo_motivo" class="w-full bg-white border border-amber-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 text-sm">
+                                        <option value="">Seleccione motivo...</option>
+                                        <option value="Pago pendiente Coca-Cola">Pago pendiente Coca-Cola</option>
+                                        <option value="Pago pendiente Sabritas">Pago pendiente Sabritas</option>
+                                        <option value="Cambio para apertura">Cambio para apertura</option>
+                                        <option value="Fondo operativo">Fondo operativo</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 border border-green-200 rounded-xl p-5">
+                            <h3 class="font-bold text-green-900 mb-3 flex items-center gap-2 text-sm">
+                                <i class="fa-solid fa-money-bill-1-wave"></i> 3. Moneda Extranjera (USD) en Sobre
+                            </h3>
+                            <div class="flex gap-4">
+                                <div class="w-1/2">
+                                    <label class="block text-xs text-green-800 mb-1">Dólares (USD)</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-2 flex items-center text-green-700 text-sm">$</span>
+                                        <input type="number" id="a_usd_monto" class="calc-trigger w-full bg-white border border-green-300 rounded pl-6 pr-2 py-1.5 focus:ring-2 focus:ring-green-500 text-sm" placeholder="0">
+                                    </div>
+                                </div>
+                                <div class="w-1/2">
+                                    <label class="block text-xs text-green-800 mb-1">Tipo de Cambio</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-2 flex items-center text-gray-500 text-sm">×</span>
+                                        <input type="number" id="a_usd_rate" class="calc-trigger w-full bg-white border border-green-300 rounded pl-6 pr-2 py-1.5 focus:ring-2 focus:ring-green-500 text-sm" value="15.00" step="0.01">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-right text-sm font-bold text-green-700">
+                                Eqv: <span id="out_usd_mxn">$0.00 MXN</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-7 bg-white border-2 border-gray-200 rounded-xl p-5 shadow-sm">
+                        <h3 class="font-bold text-gray-800 mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-envelope text-gray-400"></i> 2. Desglose del Sobre (Efectivo Entregado)
+                        </h3>
+                        <p class="text-xs text-gray-500 mb-4">* Ingresa la <strong>cantidad de piezas</strong> de cada denominación.</p>
+                        
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="denominaciones-grid">
+                            </div>
+                        
+                        <div class="mt-4 pt-3 border-t-2 border-dashed border-gray-200 flex justify-between items-center">
+                            <span class="font-bold text-gray-600">Total Físico en Sobre:</span>
+                            <span id="out_total_sobre" class="text-xl font-bold text-gray-800">$0.00</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="mt-8 bg-gray-900 rounded-xl overflow-hidden shadow-xl border border-gray-700">
+                    <div class="bg-gray-800 px-6 py-3 border-b border-gray-700">
+                        <h3 class="text-white font-bold tracking-wide uppercase text-sm"><i class="fa-solid fa-scale-balanced mr-2"></i> 4. Resultados y Auditoría de Conciliación</h3>
+                    </div>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="text-center">
+                            <span class="block text-gray-400 text-xs uppercase mb-1">Efectivo Esperado</span>
+                            <span id="aud_esperado" class="text-2xl font-mono text-white">$0.00</span>
+                        </div>
+                        <div class="text-center border-t md:border-t-0 md:border-l border-gray-700 pt-4 md:pt-0">
+                            <span class="block text-gray-400 text-xs uppercase mb-1">Total Arqueo General <br><span class="text-[10px] normal-case">(Fondo + Sobre)</span></span>
+                            <span id="aud_arqueo" class="text-2xl font-mono text-blue-400 font-bold">$0.00</span>
+                        </div>
+                        <div id="aud_box" class="text-center border-t md:border-t-0 md:border-l border-gray-700 pt-4 md:pt-0 bg-gray-900 rounded transition-colors duration-300 flex flex-col justify-center">
+                            <span class="block text-gray-400 text-xs uppercase mb-1">Diferencia Auditoría</span>
+                            <span id="aud_diff" class="text-3xl font-mono font-black text-white">$0.00</span>
+                            <span id="aud_status" class="text-xs font-bold mt-1 tracking-wider">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="step-5" class="step p-6 sm:p-10">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 border-b pb-4">
+                    <h2 class="text-2xl font-bold text-brand-900"><i class="fa-solid fa-file-pdf text-red-500 mr-2"></i> Reporte de Cierre</h2>
+                    <div class="flex gap-2">
+                        <button id="btn_copy" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-copy"></i> Texto
+                        </button>
+                        <button id="btn_wa" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                            <i class="fa-brands fa-whatsapp"></i> Enviar
+                        </button>
+                        <button id="btn_pdf" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                            <i class="fa-solid fa-download"></i> PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-center bg-gray-200 p-4 rounded-xl">
+                    <div id="print_area" class="pdf-container w-full max-w-2xl p-8 shadow-md rounded border border-gray-300 text-sm font-sans relative">
+                        
+                        <div class="text-center mb-6">
+                            <h1 class="text-2xl font-black uppercase tracking-widest text-gray-900">Cierre de Caja</h1>
+                            <div class="w-16 h-1 bg-gray-800 mx-auto my-2"></div>
+                            <p class="text-gray-600 font-medium text-base">Sucursal: <span id="r_sucursal" class="font-bold text-black uppercase"></span></p>
+                        </div>
+
+                        <div class="flex justify-between border-b-2 border-gray-800 pb-2 mb-6 font-mono text-xs">
+                            <div><strong>FECHA:</strong> <span id="r_fecha"></span></div>
+                            <div><strong>CAJERO:</strong> <span id="r_cajero" class="uppercase"></span></div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6 mb-6">
+                            
+                            <div>
+                                <h3 class="font-bold bg-gray-800 text-white px-2 py-1 mb-2 text-xs uppercase">Validación de Tarjetas</h3>
+                                <div class="flex justify-between text-xs mb-1"><span>Subtotal Tickets:</span> <span id="r_tickets"></span></div>
+                                <div class="flex justify-between text-xs mb-1"><span>Terminal Física:</span> <span id="r_terminal"></span></div>
+                                <div class="flex justify-between text-xs font-bold border-t border-gray-300 pt-1 mt-1">
+                                    <span>Diferencia TPV:</span> <span id="r_diff_tpv"></span>
+                                </div>
+                                <div id="r_comp_box" class="text-[10px] text-gray-500 italic hidden mt-1">* Se aplicó compensación a efectivo</div>
+
+                                <h3 class="font-bold bg-gray-800 text-white px-2 py-1 mb-2 mt-4 text-xs uppercase">Movimientos de Sistema</h3>
+                                <div class="flex justify-between text-xs mb-1"><span>Ventas Efectivo:</span> <span id="r_ventas"></span></div>
+                                <div class="flex justify-between text-xs mb-1 text-green-700"><span>Entradas (+):</span> <span id="r_entradas"></span></div>
+                                <div class="flex justify-between text-xs mb-1 text-red-700"><span>Salidas (-):</span> <span id="r_salidas"></span></div>
+                                <div class="flex justify-between text-xs mb-1 text-red-700"><span>Consumo Interno:</span> <span id="r_consumo"></span></div>
+                                <div class="flex justify-between text-xs mb-1"><span>Ajustes:</span> <span id="r_ajustes"></span></div>
+                                <div class="flex justify-between text-xs font-bold border-t border-gray-300 pt-1 mt-1 bg-gray-100 p-1">
+                                    <span>Efectivo Esperado:</span> <span id="r_esperado"></span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 class="font-bold bg-gray-800 text-white px-2 py-1 mb-2 text-xs uppercase">Arqueo Físico</h3>
+                                
+                                <div class="bg-gray-100 border border-gray-300 p-2 mb-3">
+                                    <div class="font-bold text-xs uppercase border-b border-gray-300 pb-1 mb-1">Fondo (Se queda en caja)</div>
+                                    <div class="flex justify-between text-xs"><span>Monto:</span> <span id="r_fondo_monto" class="font-bold"></span></div>
+                                    <div class="flex justify-between text-xs text-gray-600 truncate mt-1"><span>Motivo:</span> <span id="r_fondo_motivo"></span></div>
+                                </div>
+
+                                <div class="border border-gray-300 p-2 mb-3">
+                                    <div class="font-bold text-xs uppercase border-b border-gray-300 pb-1 mb-1">Efectivo Entregado (Sobre)</div>
+                                    <div class="flex justify-between text-xs mb-1"><span>MXN (Billetes/Monedas):</span> <span id="r_sobre_mxn"></span></div>
+                                    <div class="flex justify-between text-xs mb-1"><span>USD (Conv. MXN):</span> <span id="r_sobre_usd"></span></div>
+                                    <div class="flex justify-between text-xs font-bold border-t border-gray-200 pt-1 mt-1">
+                                        <span>Total Sobre:</span> <span id="r_sobre_total"></span>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-between text-xs font-bold border-2 border-gray-800 p-1">
+                                    <span>TOTAL ARQUEO GENERAL:</span> <span id="r_arqueo"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="r_aud_box" class="border-2 border-gray-800 p-3 mb-6 text-center">
+                            <h2 class="font-bold text-sm uppercase mb-1">Resultado de Auditoría</h2>
+                            <div class="text-2xl font-black font-mono tracking-widest" id="r_aud_diff"></div>
+                            <div class="text-xs font-bold uppercase tracking-widest mt-1" id="r_aud_status"></div>
+                        </div>
+
+                        <div id="r_justificaciones" class="mb-8 text-xs border border-dashed border-gray-400 p-3 hidden">
+                            <h3 class="font-bold mb-2 uppercase">Notas / Justificaciones:</h3>
+                            <ul id="r_notas_list" class="list-disc pl-4 space-y-1 text-gray-700"></ul>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-10 mt-12 pt-4">
+                            <div class="text-center">
+                                <div class="border-t-2 border-gray-800 pt-1">
+                                    <span class="block font-bold text-xs uppercase">Firma Cajero</span>
+                                    <span id="r_firma_cajero" class="block text-[10px] text-gray-500 mt-1"></span>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <div class="border-t-2 border-gray-800 pt-1">
+                                    <span class="block font-bold text-xs uppercase">Firma Supervisor</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                <button id="btn_prev" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium shadow-sm hover:bg-gray-100 transition-colors hidden focus:outline-none">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> Atrás
+                </button>
+                <div class="flex-grow"></div>
+                <button id="btn_next" class="px-8 py-2.5 bg-blue-600 text-white rounded-lg font-medium shadow-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Siguiente <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- INICIALIZACIÓN ---
+        document.getElementById('i_fecha').valueAsDate = new Date();
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('date-display').textContent = new Date().toLocaleDateString('es-MX', dateOptions);
+
+        // --- WIZARD NAVEGACIÓN ---
+        let currentStep = 1;
+        const totalSteps = 5;
+        const btnNext = document.getElementById('btn_next');
+        const btnPrev = document.getElementById('btn_prev');
+
+        function updateWizard() {
+            document.querySelectorAll('.step').forEach((el, index) => {
+                if (index + 1 === currentStep) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+
+            document.getElementById('progress-bar').style.width = `${((currentStep - 1) / (totalSteps - 1)) * 100}%`;
+
+            for (let i = 1; i <= totalSteps; i++) {
+                const ind = document.getElementById(`ind-${i}`);
+                if (i < currentStep) {
+                    ind.className = 'w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-md transition-all border-4 border-white';
+                    ind.innerHTML = '<i class="fa-solid fa-check"></i>';
+                } else if (i === currentStep) {
+                    ind.className = 'w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold shadow-lg ring-4 ring-blue-100 border-4 border-white scale-110';
+                    if(i === 5) ind.innerHTML = '<i class="fa-solid fa-file-invoice"></i>';
+                    else ind.innerHTML = i;
+                } else {
+                    ind.className = 'w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold shadow-inner transition-all border-4 border-white';
+                    if(i === 5) ind.innerHTML = '<i class="fa-solid fa-file-invoice"></i>';
+                    else ind.innerHTML = i;
+                }
+            }
+
+            btnPrev.classList.toggle('hidden', currentStep === 1);
+            if (currentStep === totalSteps) {
+                btnNext.classList.add('hidden');
+                generarReporte();
+            } else {
+                btnNext.classList.remove('hidden');
+                btnNext.innerHTML = currentStep === totalSteps - 1 ? 'Finalizar Auditoría <i class="fa-solid fa-check-double ml-2"></i>' : 'Siguiente <i class="fa-solid fa-arrow-right ml-2"></i>';
+            }
+        }
+
+        btnNext.addEventListener('click', () => { if (currentStep < totalSteps) { currentStep++; updateWizard(); } });
+        btnPrev.addEventListener('click', () => { if (currentStep > 1) { currentStep--; updateWizard(); } });
+
+        // --- GENERAR GRILLA DE DENOMINACIONES ---
+        const denominaciones = [
+            { v: 1000, type: 'billete' }, { v: 500, type: 'billete' }, { v: 200, type: 'billete' }, { v: 100, type: 'billete' }, { v: 50, type: 'billete' }, { v: 20, type: 'billete' },
+            { v: 20, type: 'moneda' }, { v: 10, type: 'moneda' }, { v: 5, type: 'moneda' }, { v: 2, type: 'moneda' }, { v: 1, type: 'moneda' }, { v: 0.5, type: 'moneda' }
+        ];
+        
+        const grid = document.getElementById('denominaciones-grid');
+        denominaciones.forEach(d => {
+            const isBill = d.type === 'billete';
+            const icon = isBill ? '<i class="fa-solid fa-money-bill text-green-600 opacity-70"></i>' : '<i class="fa-solid fa-coins text-yellow-600 opacity-70"></i>';
+            grid.insertAdjacentHTML('beforeend', `
+                <div class="flex items-center justify-between border border-gray-200 bg-gray-50 p-2 rounded hover:bg-white transition-colors shadow-sm">
+                    <label class="text-xs font-bold text-gray-700 flex items-center gap-1.5 w-16">${icon} $${d.v}</label>
+                    <input type="number" data-val="${d.v}" min="0" class="den-input calc-trigger w-16 text-center rounded border border-gray-300 py-1 text-sm focus:ring-blue-500 focus:outline-none" placeholder="0">
+                </div>
+            `);
+        });
+
+        // --- LÓGICA DE CÁLCULO CENTRAL ---
+        const fmt = (num) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(num || 0);
+        const getV = (id) => parseFloat(document.getElementById(id).value) || 0;
+
+        function calcularTodo() {
+            // 1. Tarjetas
+            const tManana = getV('t_manana');
+            const tTarde = getV('t_tarde');
+            const tTerminal = getV('t_terminal');
+            
+            const subtotalTickets = tManana + tTarde;
+            const diffTarjetas = tTerminal - subtotalTickets; // Positivo si hay más en terminal
+            
+            document.getElementById('out_subtotal_tickets').textContent = fmt(subtotalTickets);
+            const elDiffT = document.getElementById('out_diff_tarjetas');
+            elDiffT.textContent = fmt(diffTarjetas);
+            elDiffT.className = `text-2xl font-black ${diffTarjetas === 0 ? 'text-green-600' : (diffTarjetas > 0 ? 'text-blue-600' : 'text-red-600')}`;
+            
+            const elMsgT = document.getElementById('out_diff_msg');
+            elMsgT.textContent = diffTarjetas === 0 ? 'Cuadre exacto' : (diffTarjetas > 0 ? `Sobrante en terminal ($${diffTarjetas})` : `Faltante en terminal ($${Math.abs(diffTarjetas)})`);
+
+            // 2. Sistema
+            const sVentas = getV('s_ventas');
+            const sEntradas = getV('s_entradas');
+            const sSalidas = getV('s_salidas');
+            const sConsMonto = getV('s_cons_monto');
+            
+            const sAjusteSigno = parseInt(document.getElementById('s_ajuste_signo').value);
+            const sAjusteMonto = getV('s_ajuste_monto') * sAjusteSigno;
+            
+            const sCompensar = document.getElementById('s_compensar').checked;
+            const compensacion = sCompensar ? (-diffTarjetas) : 0; // Inverso: Si terminal sobra (pagaron cash con tarjeta), restamos al esperado.
+
+            const esperado = (sVentas + sEntradas) - (sSalidas + sConsMonto) + sAjusteMonto + compensacion;
+            document.getElementById('out_efectivo_esperado').textContent = fmt(esperado);
+
+            // 3. Arqueo
+            let totalMxnFisico = 0;
+            document.querySelectorAll('.den-input').forEach(inp => {
+                totalMxnFisico += (parseFloat(inp.getAttribute('data-val')) * (parseInt(inp.value) || 0));
+            });
+
+            const usdMonto = getV('a_usd_monto');
+            const usdRate = getV('a_usd_rate');
+            const totalUsdConv = usdMonto * usdRate;
+            document.getElementById('out_usd_mxn').textContent = fmt(totalUsdConv);
+
+            const totalSobre = totalMxnFisico + totalUsdConv;
+            document.getElementById('out_total_sobre').textContent = fmt(totalSobre);
+
+            const fondoMonto = getV('a_fondo_monto');
+            const totalArqueo = totalSobre + fondoMonto;
+
+            // 4. Auditoría
+            const diffAuditoria = totalArqueo - esperado;
+            
+            document.getElementById('aud_esperado').textContent = fmt(esperado);
+            document.getElementById('aud_arqueo').textContent = fmt(totalArqueo);
+            document.getElementById('aud_diff').textContent = fmt(diffAuditoria);
+            
+            const audBox = document.getElementById('aud_box');
+            const audStatus = document.getElementById('aud_status');
+            
+            if (diffAuditoria === 0) {
+                audBox.className = 'text-center border-t md:border-t-0 md:border-l border-gray-700 pt-4 md:pt-0 bg-green-900 rounded flex flex-col justify-center';
+                document.getElementById('aud_diff').className = 'text-3xl font-mono font-black text-green-300';
+                audStatus.textContent = 'CUADRE EXACTO';
+                audStatus.className = 'text-xs font-bold mt-1 tracking-wider text-green-400';
+            } else if (diffAuditoria > 0) {
+                audBox.className = 'text-center border-t md:border-t-0 md:border-l border-gray-700 pt-4 md:pt-0 bg-blue-900 rounded flex flex-col justify-center';
+                document.getElementById('aud_diff').className = 'text-3xl font-mono font-black text-blue-300';
+                audStatus.textContent = 'SOBRANTE';
+                audStatus.className = 'text-xs font-bold mt-1 tracking-wider text-blue-400';
+            } else {
+                audBox.className = 'text-center border-t md:border-t-0 md:border-l border-gray-700 pt-4 md:pt-0 bg-red-900 rounded flex flex-col justify-center';
+                document.getElementById('aud_diff').className = 'text-3xl font-mono font-black text-red-300';
+                audStatus.textContent = 'FALTANTE';
+                audStatus.className = 'text-xs font-bold mt-1 tracking-wider text-red-400';
+            }
+
+            return { subtotalTickets, tTerminal, diffTarjetas, sVentas, sEntradas, sSalidas, sConsMonto, sAjusteMonto, compensacion, esperado, totalMxnFisico, totalUsdConv, totalSobre, fondoMonto, totalArqueo, diffAuditoria };
+        }
+
+        // Attach events
+        document.querySelectorAll('.calc-trigger').forEach(el => {
+            el.addEventListener('input', calcularTodo);
+            el.addEventListener('change', calcularTodo);
+        });
+
+        // --- REPORTE Y EXPORTACIÓN ---
+        function generarReporte() {
+            const d = calcularTodo();
+            
+            document.getElementById('r_sucursal').textContent = document.getElementById('i_sucursal').value;
+            const fVal = document.getElementById('i_fecha').value;
+            document.getElementById('r_fecha').textContent = fVal ? fVal.split('-').reverse().join('/') : '-';
+            const cajeroName = document.getElementById('i_cajero').value || 'NO ESPECIFICADO';
+            document.getElementById('r_cajero').textContent = cajeroName;
+            document.getElementById('r_firma_cajero').textContent = cajeroName;
+
+            document.getElementById('r_tickets').textContent = fmt(d.subtotalTickets);
+            document.getElementById('r_terminal').textContent = fmt(d.tTerminal);
+            const elRDiffT = document.getElementById('r_diff_tpv');
+            elRDiffT.textContent = fmt(d.diffTarjetas);
+            elRDiffT.className = d.diffTarjetas < 0 ? 'text-red-600' : (d.diffTarjetas > 0 ? 'text-blue-600' : 'text-gray-800');
+            document.getElementById('r_comp_box').style.display = document.getElementById('s_compensar').checked ? 'block' : 'none';
+
+            document.getElementById('r_ventas').textContent = fmt(d.sVentas);
+            document.getElementById('r_entradas').textContent = fmt(d.sEntradas);
+            document.getElementById('r_salidas').textContent = fmt(d.sSalidas);
+            document.getElementById('r_consumo').textContent = fmt(d.sConsMonto);
+            document.getElementById('r_ajustes').textContent = fmt(d.sAjusteMonto);
+            document.getElementById('r_esperado').textContent = fmt(d.esperado);
+
+            document.getElementById('r_fondo_monto').textContent = fmt(d.fondoMonto);
+            document.getElementById('r_fondo_motivo').textContent = document.getElementById('a_fondo_motivo').value || 'N/A';
+            
+            document.getElementById('r_sobre_mxn').textContent = fmt(d.totalMxnFisico);
+            document.getElementById('r_sobre_usd').textContent = fmt(d.totalUsdConv) + (d.totalUsdConv>0 ? ` (T.C. $${document.getElementById('a_usd_rate').value})` : '');
+            document.getElementById('r_sobre_total').textContent = fmt(d.totalSobre);
+            document.getElementById('r_arqueo').textContent = fmt(d.totalArqueo);
+
+            const rb = document.getElementById('r_aud_box');
+            const rd = document.getElementById('r_aud_diff');
+            const rs = document.getElementById('r_aud_status');
+            
+            rd.textContent = fmt(d.diffAuditoria);
+            if(d.diffAuditoria === 0) {
+                rb.className = 'border-2 border-green-700 bg-green-50 p-3 mb-6 text-center text-green-900';
+                rs.textContent = 'CUADRE EXACTO';
+            } else if (d.diffAuditoria > 0) {
+                rb.className = 'border-2 border-blue-700 bg-blue-50 p-3 mb-6 text-center text-blue-900';
+                rs.textContent = 'SOBRANTE';
+            } else {
+                rb.className = 'border-2 border-red-700 bg-red-50 p-3 mb-6 text-center text-red-900';
+                rs.textContent = 'FALTANTE';
+            }
+
+            // Justificaciones
+            const justContainer = document.getElementById('r_justificaciones');
+            const list = document.getElementById('r_notas_list');
+            list.innerHTML = '';
+            let hasNotes = false;
+
+            const cNombre = document.getElementById('s_cons_nombre').value;
+            if(d.sConsMonto > 0) {
+                list.insertAdjacentHTML('beforeend', `<li><strong>Consumo:</strong> ${cNombre || 'Sin nombre'} (${fmt(d.sConsMonto)})</li>`);
+                hasNotes = true;
+            }
+            if(Math.abs(d.sAjusteMonto) > 0) {
+                const mot = document.getElementById('s_ajuste_motivo').value;
+                list.insertAdjacentHTML('beforeend', `<li><strong>Ajuste (${fmt(d.sAjusteMonto)}):</strong> ${mot || 'Sin justificar'}</li>`);
+                hasNotes = true;
+            }
+            if(document.getElementById('s_compensar').checked) {
+                list.insertAdjacentHTML('beforeend', `<li><strong>Compensación:</strong> Se aplicó ajuste al efectivo esperado por diferencia en TPV (${fmt(-d.diffTarjetas)}).</li>`);
+                hasNotes = true;
+            }
+
+            justContainer.style.display = hasNotes ? 'block' : 'none';
+        }
+
+        // WhatsApp String Generator
+        function getSummaryString() {
+            const d = calcularTodo();
+            const suc = document.getElementById('i_sucursal').value;
+            const fec = document.getElementById('i_fecha').value || 'S/F';
+            const caj = document.getElementById('i_cajero').value || 'Sin nombre';
+            
+            let status = d.diffAuditoria === 0 ? '✅ CUADRADO' : (d.diffAuditoria > 0 ? '🔵 SOBRANTE' : '🔴 FALTANTE');
+            
+            return `*CIERRE DE CAJA - ${suc}*\nFecha: ${fec}\nCajero: ${caj}\n\n*RESULTADO AUDITORÍA:* ${status} (${fmt(d.diffAuditoria)})\n\n*RESUMEN*\n- Efectivo Esperado: ${fmt(d.esperado)}\n- Total Arqueo Físico: ${fmt(d.totalArqueo)}\n\n*DESGLOSE FÍSICO*\n- Efectivo en Sobre: ${fmt(d.totalSobre)}\n- Fondo Retenido: ${fmt(d.fondoMonto)}\n\n*TARJETAS*\n- Diferencia TPV: ${fmt(d.diffTarjetas)}`;
+        }
+
+        // Botones de acción
+        document.getElementById('btn_wa').addEventListener('click', () => {
+            const text = encodeURIComponent(getSummaryString());
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        });
+
+        document.getElementById('btn_copy').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(getSummaryString());
+                const b = document.getElementById('btn_copy');
+                b.innerHTML = '<i class="fa-solid fa-check text-green-600"></i> Copiado';
+                setTimeout(() => b.innerHTML = '<i class="fa-solid fa-copy"></i> Texto', 2000);
+            } catch (err) { alert('Error al copiar al portapapeles'); }
+        });
+
+        document.getElementById('btn_pdf').addEventListener('click', () => {
+            const element = document.getElementById('print_area');
+            const btn = document.getElementById('btn_pdf');
+            const suc = document.getElementById('i_sucursal').value;
+            const fec = document.getElementById('i_fecha').value || 'SF';
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            html2pdf().set({
+                margin: 10,
+                filename: `Cierre_${suc}_${fec}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).save().then(() => {
+                btn.innerHTML = '<i class="fa-solid fa-download"></i> PDF';
+                btn.disabled = false;
+            });
+        });
+
+        // Init
+        calcularTodo();
+    </script>
+</body>
+</html>
